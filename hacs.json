@@ -1,0 +1,9 @@
+{
+  "name": "Live Soccer Score Card",
+  "description": "Shows live soccer scores — flags, kickoff/live/full-time status.",
+  "category": "plugin",
+  "render_readme": true,
+  "content_in_root": false,
+  "filename": "live-soccer-score-card.js",
+  "homeassistant": "2023.4.0"
+}
