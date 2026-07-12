@@ -202,7 +202,8 @@
     <strong>On this page</strong>
     <ul>
       <li><a href="#preview">Preview</a></li>
-      <li><a href="#install">Adding the card to a dashboard</a></li>
+      <li><a href="#install">Installation</a></li>
+      <li><a href="#multiscrape-setup">Multiscrape sensor setup</a></li>
       <li><a href="#configuration">YAML configuration</a></li>
       <li><a href="#example">Example</a></li>
       <li><a href="#suggestions">Entity suggestions</a></li>
@@ -249,7 +250,22 @@
   </section>
 
   <section id="install">
-    <h2>Adding the card to a dashboard</h2>
+    <h2>Installation</h2>
+    <p>Install via HACS, or copy the file manually — both end up in the same place.</p>
+
+    <h3>Install via HACS</h3>
+    <p>
+      <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=KingDando8430&amp;repository=HA-Live-Soccer-Score-Card&amp;category=plugin" target="_blank" rel="noopener">
+        <img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.">
+      </a>
+    </p>
+    <ol class="steps">
+      <li>Click the badge above to add the repository in HACS.</li>
+      <li>Install <strong>Live Soccer Score Card</strong> as a plugin, then reload/refresh the browser.</li>
+      <li>Edit a dashboard, select <strong>Add card</strong>, and either pick a matching Multiscrape entity (see <a href="#suggestions">Entity suggestions</a>) or search for <strong>Live Soccer Score</strong>.</li>
+    </ol>
+
+    <h3>Install manually</h3>
     <p>The card is a plain JavaScript module — no build step, no dependencies.</p>
     <ol class="steps">
       <li>Copy <code>live-soccer-score-card.js</code> to <code>&lt;config&gt;/www/live-soccer-score-card.js</code>.</li>
@@ -258,6 +274,51 @@
       <li>Edit a dashboard, select <strong>Add card</strong>, and either pick a matching Multiscrape entity (see <a href="#suggestions">Entity suggestions</a>) or search for <strong>Live Soccer Score</strong>.</li>
     </ol>
     <p>If you update the file later and the dashboard doesn't pick up the change, browsers cache JavaScript resources aggressively. Bump the resource URL to <code>/local/live-soccer-score-card.js?v=2</code> or hard-refresh.</p>
+  </section>
+
+  <section id="multiscrape-setup">
+    <h2>Multiscrape sensor setup</h2>
+    <p>The card reads from a single <a href="https://github.com/danieldotnl/ha-multiscrape" target="_blank" rel="noopener">Multiscrape</a> sensor exposing team names and score attributes. Example <code>configuration.yaml</code> block for a FIFA World Cup 2026 scoreboard:</p>
+    <pre><code>multiscrape:
+  - resource: "https://wc.markus.workers.dev/"
+    scan_interval: 60
+    sensor:
+      - name: "FIFA World Cup 2026"
+        unique_id: "fifa_world_cup_2026"
+        select: "h1"
+        attributes:
+          - name: Team 1
+            select: "h1"
+            value_template: &gt;
+              {% set raw_teams = value.split(' (')[0] if ' (' in value else value %}
+              {{ raw_teams.split(' vs. ')[0].strip() if ' vs. ' in raw_teams else 'Unknown' }}
+          - name: Team 2
+            select: "h1"
+            value_template: &gt;
+              {% set raw_teams = value.split(' (')[0] if ' (' in value else value %}
+              {{ raw_teams.split(' vs. ')[1].strip() if ' vs. ' in raw_teams else 'Unknown' }}
+          - name: Ongoing
+            select: "body"
+            extract: content
+            value_template: "{{ '&lt;p&gt;' in value }}"
+            on_error:
+              value: none
+          - name: Score
+            select: "p"
+            value_template: "{{ value if ':' in value else None }}"
+            on_error:
+              value: none
+          - name: Goals Team 1
+            select: "p"
+            value_template: "{{ value.split(':')[0] if ':' in value else None }}"
+            on_error:
+              value: none
+          - name: Goals Team 2
+            select: "p"
+            value_template: "{{ value.split(':')[1] if ':' in value else None }}"
+            on_error:
+              value: none</code></pre>
+    <p>Scraping approach adapted from a post by <strong>markus</strong> on the <a href="https://forum.aqara.com/t/my-world-cup-match-day-automation-with-live-goal-announcements/310351/2?u=kingdando" target="_blank" rel="noopener">Aqara forum</a> (see <a href="#credits">Credits</a>). After adding the sensor, restart Home Assistant (or reload YAML configuration) so it's picked up.</p>
   </section>
 
   <section id="configuration">
@@ -337,6 +398,7 @@ subtitle: Quarterfinal</code></pre>
 
   <section id="credits">
     <h2>Credits</h2>
+    <p>The Multiscrape sensor config is adapted from a scraping approach by <strong>markus</strong>, shared on the <a href="https://forum.aqara.com/t/my-world-cup-match-day-automation-with-live-goal-announcements/310351/2?u=kingdando" target="_blank" rel="noopener">Aqara forum</a>.</p>
     <p>Flags are provided by the <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a> project, served via jsDelivr's GitHub mirror.</p>
     <p>flag-icons is licensed under the MIT License, Copyright (c) 2013 Panayiotis Lipiridis. Full license text: <a href="https://github.com/lipis/flag-icons/blob/main/LICENSE" target="_blank" rel="noopener">github.com/lipis/flag-icons/blob/main/LICENSE</a>.</p>
   </section>
@@ -344,7 +406,7 @@ subtitle: Quarterfinal</code></pre>
   <section id="related">
     <h2>Related topics</h2>
     <ul class="related">
-      <li><a href="https://github.com/danielbrunt57/multiscrape" target="_blank" rel="noopener">Multiscrape integration</a> — the integration this card is built for.</li>
+      <li><a href="https://github.com/danieldotnl/ha-multiscrape" target="_blank" rel="noopener">Multiscrape integration</a> — the integration this card is built for.</li>
       <li><a href="https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/" target="_blank" rel="noopener">Developing custom cards</a> — Home Assistant's developer docs.</li>
       <li><a href="https://www.home-assistant.io/dashboards/sections/" target="_blank" rel="noopener">Sections view</a> — for the <code>grid_options</code> sizing behavior.</li>
       <li><a href="https://flagicons.lipis.dev" target="_blank" rel="noopener">flag-icons demo</a> — full list of available flag codes.</li>
