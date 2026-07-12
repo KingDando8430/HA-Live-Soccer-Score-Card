@@ -528,8 +528,17 @@ class LiveSoccerScoreCard extends HTMLElement {
 
     if (kickoff) {
       if (now < kickoff) {
-        const time = kickoff.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return { label: `Kickoff ${time}`, isLive: false };
+        const sameDay = now.getFullYear() === kickoff.getFullYear()
+          && now.getMonth() === kickoff.getMonth()
+          && now.getDate() === kickoff.getDate();
+
+        if (sameDay) {
+          const time = kickoff.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return { label: `Kickoff ${time}`, isLive: false };
+        }
+
+        const day = kickoff.toLocaleDateString('en-US', { weekday: 'long' });
+        return { label: `Kickoff ${day}`, isLive: false };
       }
       return { label: 'Full Time', isLive: false };
     }
