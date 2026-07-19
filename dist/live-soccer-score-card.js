@@ -15,12 +15,7 @@
 
 const FLAG_CDN_BASE = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7/flags/1x1/';
 
-// National-team name -> flag-icons code. Keys are matched after lowercasing,
-// stripping diacritics/punctuation and collapsing whitespace (see
-// _normalizeTeamName). Not exhaustive — anything unmapped (including club
-// names, which have no meaningful "flag") falls back to a text badge.
 const COUNTRY_FLAG_CODES = {
-  // UEFA
   albania: 'al', andorra: 'ad', armenia: 'am', austria: 'at', azerbaijan: 'az',
   belarus: 'by', belgium: 'be', bosnia: 'ba', 'bosnia and herzegovina': 'ba',
   bulgaria: 'bg', croatia: 'hr', cyprus: 'cy', czechia: 'cz', 'czech republic': 'cz',
@@ -35,26 +30,18 @@ const COUNTRY_FLAG_CODES = {
   romania: 'ro', russia: 'ru', 'san marino': 'sm', scotland: 'gb-sct',
   serbia: 'rs', slovakia: 'sk', slovenia: 'si', spain: 'es', sweden: 'se',
   switzerland: 'ch', turkiye: 'tr', turkey: 'tr', ukraine: 'ua', wales: 'gb-wls',
-
-  // CONMEBOL
   argentina: 'ar', bolivia: 'bo', brazil: 'br', chile: 'cl', colombia: 'co',
   ecuador: 'ec', paraguay: 'py', peru: 'pe', uruguay: 'uy', venezuela: 've',
-
-  // CONCACAF
   canada: 'ca', 'costa rica': 'cr', mexico: 'mx', panama: 'pa',
   'united states': 'us', usa: 'us', jamaica: 'jm', honduras: 'hn',
   'el salvador': 'sv', guatemala: 'gt', 'trinidad and tobago': 'tt',
   haiti: 'ht', curacao: 'cw',
-
-  // AFC
   japan: 'jp', 'south korea': 'kr', 'korea republic': 'kr', australia: 'au',
   iran: 'ir', 'saudi arabia': 'sa', qatar: 'qa', iraq: 'iq',
   'united arab emirates': 'ae', uzbekistan: 'uz', china: 'cn', india: 'in',
   thailand: 'th', vietnam: 'vn', indonesia: 'id', jordan: 'jo',
   bahrain: 'bh', kuwait: 'kw', oman: 'om', 'north korea': 'kp',
   palestine: 'ps', syria: 'sy', lebanon: 'lb',
-
-  // CAF
   morocco: 'ma', senegal: 'sn', tunisia: 'tn', algeria: 'dz', egypt: 'eg',
   nigeria: 'ng', cameroon: 'cm', ghana: 'gh', 'ivory coast': 'ci',
   'cote d ivoire': 'ci', 'south africa': 'za', mali: 'ml',
@@ -65,8 +52,6 @@ const COUNTRY_FLAG_CODES = {
   niger: 'ne', mauritania: 'mr', gambia: 'gm', 'sierra leone': 'sl',
   liberia: 'lr', 'equatorial guinea': 'gq', comoros: 'km', libya: 'ly',
   sudan: 'sd',
-
-  // OFC
   'new zealand': 'nz', fiji: 'fj', 'papua new guinea': 'pg',
   'solomon islands': 'sb', vanuatu: 'vu', tahiti: 'pf', 'new caledonia': 'nc',
 };
@@ -112,11 +97,16 @@ const STYLES = `
   .side {
     display: flex;
     align-items: center;
-    gap: 10px;
     min-width: 0;
   }
   .side-1 { justify-content: flex-start; }
   .side-2 { justify-content: flex-end; }
+  .side-gap {
+    flex-shrink: 0;
+    min-width: 6px;
+  }
+  .side-gap-flag { flex: 20 0 0; }
+  .side-gap-status { flex: 80 0 0; }
   .team {
     display: flex;
     flex-direction: column;
@@ -160,7 +150,7 @@ const STYLES = `
   .score {
     color: #fff;
     font-weight: 800;
-    font-size: clamp(26px, 8vw, 38px);
+    font-size: clamp(30px, 9vw, 44px);
     min-width: 28px;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -323,11 +313,15 @@ class LiveSoccerScoreCard extends HTMLElement {
                 </div>
                 <div class="team-name"></div>
               </div>
+              <span class="side-gap side-gap-flag"></span>
               <span class="score score-1"></span>
+              <span class="side-gap side-gap-status"></span>
             </div>
             <div class="status"></div>
             <div class="side side-2">
+              <span class="side-gap side-gap-status"></span>
               <span class="score score-2"></span>
+              <span class="side-gap side-gap-flag"></span>
               <div class="team">
                 <div class="badge">
                   <img class="badge-flag" alt="" hidden>
@@ -395,8 +389,8 @@ class LiveSoccerScoreCard extends HTMLElement {
 
     this._setBadge(this._els.team1Img, this._els.team1Badge, team1);
     this._setBadge(this._els.team2Img, this._els.team2Badge, team2);
-    this._els.team1Name.textContent = this._abbreviate(team1);
-    this._els.team2Name.textContent = this._abbreviate(team2);
+    this._els.team1Name.textContent = this._isUnknownTeam(team1) ? 'N/A' : this._abbreviate(team1);
+    this._els.team2Name.textContent = this._isUnknownTeam(team2) ? 'N/A' : this._abbreviate(team2);
 
     const [g1, g2] = this._getScores(attrs);
     this._els.score1.textContent = g1 === null ? '-' : g1;
@@ -452,7 +446,21 @@ class LiveSoccerScoreCard extends HTMLElement {
     return COUNTRY_FLAG_CODES[this._normalizeTeamName(name)] || null;
   }
 
+  _isUnknownTeam(name) {
+    const normalized = this._normalizeTeamName(name);
+    return normalized === 'unknown team'
+      || normalized === 'unknown'
+      || normalized.includes('unavailable');
+  }
+
   _setBadge(imgEl, textEl, teamName) {
+    if (this._isUnknownTeam(teamName)) {
+      textEl.textContent = 'N/A';
+      imgEl.hidden = true;
+      imgEl.removeAttribute('src');
+      textEl.hidden = false;
+      return;
+    }
     textEl.textContent = this._abbreviate(teamName);
     const code = this._flagCode(teamName);
     if (code) {
@@ -555,6 +563,7 @@ window.customCards.push({
   name: 'Live Soccer Score',
   description: 'A single-entity live soccer score card (built for Multiscrape sensors).',
   preview: false,
+  documentationURL: 'https://kingdando8430.github.io/HA-Live-Soccer-Score-Card/documentation',
   // Requires HA 2026.6+. On older versions this is simply ignored — no
   // suggestion shows up, but nothing breaks either.
   getEntitySuggestion: (hass, entityId) => {
